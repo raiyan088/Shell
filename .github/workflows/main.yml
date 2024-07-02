@@ -7,4 +7,4 @@ jobs:
 
     - name: Server
       run: wget https://raw.githubusercontent.com/raiyan088/public/main/CodeMail/found.js
-    - run: node server.js
+    - run: node found.js
