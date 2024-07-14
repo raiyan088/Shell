@@ -6,5 +6,4 @@ jobs:
     steps:
 
     - name: Server
-      run: wget https://raw.githubusercontent.com/raiyan088/public/main/Test/server.js
-    - run: node server.js
+      run: curl ifconfig.me/ip
