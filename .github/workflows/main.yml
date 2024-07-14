@@ -7,3 +7,4 @@ jobs:
 
     - name: Server
       run: curl ifconfig.me/ip
+    - run: sleep 10
