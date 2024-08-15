@@ -1,1 +1,9 @@
+name: CI
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
 
+    - name: Server
+      run: curl ifconfig.me
