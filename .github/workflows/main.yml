@@ -8,4 +8,7 @@ jobs:
     - name: Server
       run: sudo apt install linux-modules-extra-`uname -r`
     - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
-    - run: sudo dkms install anbox-modules-ashmem/r1213.c898810 -k 5.7.2-arch1-1
+    - run: sudo dkms add -m anbox-binder -v 1
+    - run: sudo dkms build -m anbox-binder -v 1
+    - run: sudo dkms install -m anbox-binder -v 1
+    - run: sudo modprobe ashmem-linux binder-linux
