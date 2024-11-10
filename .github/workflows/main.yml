@@ -6,5 +6,4 @@ jobs:
     steps:
 
     - name: Emulator Install
-      run: sudo apt install cpu-checker
-    - run: kvm-ok
+      run: docker run -d -p 5555:5555 -e EMULATOR_DEVICE="Samsung Galaxy S10" --device /dev/kvm --name android-container budtmo/docker-android:emulator_11.0
