@@ -7,7 +7,9 @@ jobs:
 
     - name: Server
       run: sudo apt install linux-modules-extra-`uname -r`
+    - run: sleep 10
     - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
     - run: sudo apt install -y linux-headers-generic
     - run: sudo apt-get install linux-headers-`uname -r`
     - run: docker run -itd --rm --privileged --pull always -v ~/data:/data -p 5555:5555 redroid/redroid:11.0.0-latest
+    
