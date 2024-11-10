@@ -6,7 +6,8 @@ jobs:
     steps:
 
     - name: Emulator Install
-      run: sudo apt install linux-modules-extra-`uname -r`
+      run: sudo apt-get install android-tools-adb
+    - run: sudo apt install linux-modules-extra-`uname -r`
     - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
     - run: sudo docker run -itd --rm --privileged --pull always -v ~/data:/data -p 5555:5555 redroid/redroid:11.0.0-latest
 
