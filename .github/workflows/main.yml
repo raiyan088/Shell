@@ -9,7 +9,7 @@ jobs:
       run: sudo apt install linux-modules-extra-`uname -r`
     - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
     - run: sudo apt-get install dkms
-    - run: sudo dkms add -m anbox-binder -v 1
-    - run: sudo dkms build -m anbox-binder -v 1
-    - run: sudo dkms install -m anbox-binder -v 1
+    - run: sudo dkms add -m anbox-binder
+    - run: sudo dkms build -m anbox-binder
+    - run: sudo dkms install -m anbox-binder
     - run: sudo modprobe ashmem-linux binder-linux
