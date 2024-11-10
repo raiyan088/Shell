@@ -6,9 +6,7 @@ jobs:
     steps:
 
     - name: Emulator Install
-      run: sudo apt install linux-modules-extra-`uname -r`
-    - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
-    - run: sudo docker run -itd --rm --privileged --pull always -v ~/data:/data -p 5555:5555 redroid/redroid:12.0.0_64only-latest
+      run: sudo docker run -itd --rm --privileged --pull always -v ~/data:/data -p 5555:5555 redroid/redroid:12.0.0_64only-latest
 
     - name: Node Js
       run: wget https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/adb https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/facebook/test.js https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/facebook/package.json
