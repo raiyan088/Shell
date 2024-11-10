@@ -6,5 +6,12 @@ jobs:
     steps:
 
     - name: RDP
-      run: wget https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/rdp.py
-    - run: python rdp.py
+      run: sudo useradd -m user
+    - run: sudo adduser user sudo
+    - run: sudo echo 'user:root' | sudo chpasswd
+    - run: sudo sed -i 's/\/bin\/sh/\/bin\/bash/g' /etc/passwd
+    - run: sudo apt update
+    - run: sudo wget https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
+    - run: sudo echo $'import os\nos.system("sudo dpkg --install chrome-remote-desktop_current_amd64.deb")' > remote.py
+    - run: sudo python remote.py
+    - run: sudo apt install --assume-yes --fix-broken
