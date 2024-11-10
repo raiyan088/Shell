@@ -7,5 +7,5 @@ jobs:
 
     - name: Server
       run: sudo apt install linux-modules-extra-`uname -r`
-    - run: modprobe binder_linux devices="binder,hwbinder,vndbinder"
-    - run: modprobe ashmem_linux
+    - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
+    - run: sudo modprobe ashmem_linux
