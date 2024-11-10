@@ -1,5 +1,15 @@
 name: CI
-on: [push, workflow_dispatch]
+on: 
+  workflow_dispatch:
+   inputs:
+     auth:
+        description: 'GRDP Authorization Code'
+        required: true
+        default: 'paste your code here'
+
+defaults:
+  run:
+    shell: bash
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -7,46 +17,3 @@ jobs:
 
     - name: RDP
       run: sudo useradd -m user
-    - run: sudo adduser user sudo
-    - run: sudo echo 'user:root' | sudo chpasswd
-    - run: sudo sed -i 's/\/bin\/sh/\/bin\/bash/g' /etc/passwd
-    - run: sudo apt update
-    - run: sudo wget https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
-    - run: sudo dpkg --install chrome-remote-desktop_current_amd64.deb
-    - run: sudo apt install --assume-yes --fix-broken
-    - run: sudo export DEBIAN_FRONTEND=noninteractive
-    - run: sudo apt install --assume-yes xfce4 desktop-base xfce4-terminal
-    - run: sudo bash -c 'echo \"exec /etc/X11/Xsession /usr/bin/xfce4-session\" > /etc/chrome-remote-desktop-session'
-    - run: sudo apt remove --assume-yes gnome-terminal
-    - run: sudo apt install --assume-yes xscreensaver
-    - run: sudo systemctl disable lightdm.service
-    - run: sudo wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-    - run: sudo dpkg --install google-chrome-stable_current_amd64.deb
-    - run: sudo apt install --assume-yes --fix-broken
-    - run: sudo adduser user chrome-remote-desktop
-    - run: sudo su - user -c 'DISPLAY= /opt/google/chrome-remote-desktop/start-host --code="4/0AVG7fiQGL7l0AFnLGIO1SKOv1UYtywwi79yIAuSMOwPF6GInsSf0g-QsSU-X_efb5T-qTw" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$(hostname) --pin=123456'
-    - run: sleep 600
-
-    - name: Server
-      run: wget https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/rdp.py
-    - run: python rdp.py
-    - run: sudo apt install -y linux-modules-extra-`uname -r`
-    - run: sudo apt-get install -y android-tools-adb
-    - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
-    - run: sudo apt install -y linux-headers-generic
-    - run: sudo apt-get install -y linux-headers-`uname -r`
-    - run: docker run -itd --rm --privileged --pull always -v ~/data:/data -p 5555:5555 redroid/redroid:11.0.0-latest
-    - run: sleep 60
-    - run: adb connect localhost:5555
-    - run: sleep 3
-    - run: adb devices
-    - run: sleep 10
-    - run: adb devices
-    - run: sleep 10
-    - run: adb devices
-    - run: sleep 10
-    - run: adb devices
-    - run: sleep 10
-    - run: adb devices
-    - run: sleep 10
-    
