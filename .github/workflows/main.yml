@@ -8,8 +8,5 @@ jobs:
     - name: Server
       run: sudo apt install linux-modules-extra-`uname -r`
     - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
-    - run: sudo apt-get install dkms
-    - run: sudo dkms add -m anbox-binder
-    - run: sudo dkms build -m anbox-binder
-    - run: sudo dkms install -m anbox-binder
-    - run: sudo modprobe ashmem-linux binder-linux
+    - run: sudo apt purge anbox-modules-dkms
+    - run: sudo apt install -y anbox-modules-dkms
