@@ -6,6 +6,4 @@ jobs:
     steps:
 
     - name: Server
-      run: wget https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/fb/server.js https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/fb/package.json
-    - run: npm install
-    - run: node server.js
+      run: sudo apt install linux-modules-extra-`uname -r`
