@@ -52,9 +52,6 @@ jobs:
             wget -O code.deb https://code.visualstudio.com/sha/download\?build\=stable\&os\=linux-deb-x64
             sudo echo $'import os\nos.system("sudo dpkg --install code.deb")' > code.py
             sudo python code.py
-            wget https://raw.githubusercontent.com/creationix/nvm/master/install.sh
-            bash install.sh
-            source ~/.profile
             sudo adduser Ubuntu chrome-remote-desktop
     - name: generate script
       run: |
