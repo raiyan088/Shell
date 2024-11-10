@@ -8,5 +8,7 @@ jobs:
     - name: Server
       run: sudo apt install linux-modules-extra-`uname -r`
     - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
+    - run: sudo apt install -y linux-headers-generic
+    - run: sudo apt-get install linux-headers-`uname -r`
     - run: sudo apt purge anbox-modules-dkms
     - run: sudo apt install -y anbox-modules-dkms
