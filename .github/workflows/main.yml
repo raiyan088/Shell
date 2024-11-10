@@ -6,6 +6,7 @@ jobs:
     steps:
 
     - name: RDP
-      run: wget https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
-    - run: sudo dpkg --install chrome-remote-desktop_current_amd64.deb
-    - run: sudo apt install --assume-yes --fix-broken
+      run: wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+    - run: sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+    - run: sudo apt update
+    - run: sudo apt install google-chrome-stable
