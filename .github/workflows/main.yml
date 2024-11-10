@@ -7,3 +7,14 @@ jobs:
 
     - name: Emulator Install
       run: docker run -d -p 5555:5555 -e EMULATOR_DEVICE="Samsung Galaxy S10" --device /dev/kvm --name android-container budtmo/docker-android:emulator_11.0
+    - run: sudo apt-get install android-tools-adb
+    - run: sleep 10
+    - run: adb devices
+    - run: sleep 10
+    - run: adb connect 127.0.0.1:5555
+    - run: sleep 10
+    - run: adb devices
+    - run: sleep 10
+    - run: adb devices
+    - run: sleep 10
+    - run: adb devices
