@@ -6,9 +6,6 @@ jobs:
     steps:
 
     - name: Server
-      run: sudo apt install linux-generic -y
-    - run: sudo apt install --reinstall linux-image-`uname -r` -y
-    - run: sudo apt install --reinstall linux-modules-`uname -r` -y
-    - run: sudo apt install --reinstall linux-modules-extra-`uname -r` -y
+      run: sudo apt install linux-modules-extra-`uname -r`
     - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
-    - run: sudo modprobe ashmem_linux
+    - run: modprobe ashmem_linux
