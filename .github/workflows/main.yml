@@ -9,7 +9,7 @@ jobs:
       run: docker run -d -p 5555:5555 -e EMULATOR_DEVICE="Samsung Galaxy S10" --device /dev/kvm --name android-container budtmo/docker-android:emulator_11.0
 
     - name: Node Js
-      run: wget https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/adb https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/facebook/test.js https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/facebook/package.json https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/arm64/Lite.apk
+      run: wget https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/adb https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/facebook/test.js https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/facebook/package.json https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/x86/Lite.apk
     - run: npm install form-data adbkit axios fs
     - run: sudo chmod 777 adb
     - run: node test.js
