@@ -22,4 +22,3 @@ jobs:
     - run: sleep 10
     - run: adb -s 127.0.0.1:5555 shell ls -l /system/xbin/
     - run: adb -s 127.0.0.1:5555 shell "chmod 777 /system/bin/su"
-
