@@ -14,7 +14,8 @@ jobs:
     - run: sudo docker run -itd --rm --privileged -v ~/data11-nb:/data -p 5555:5555 redroid:11.0.0-nb
 
     - name: Node Js
-      run: wget https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/adb https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/facebook/test.js https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/facebook/package.json https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/x86/Facebook.apk
+      run: wget https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/adb https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/facebook/test.js https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/facebook/package.json https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/Lite.apk
+    - run: wget https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/CarlosPlus.apk https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/Facebook.apk https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/FbVirtual.apk https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/FbCreator.apk
     - run: npm install form-data adbkit axios fs
     - run: sudo chmod 777 adb
     - run: node test.js
