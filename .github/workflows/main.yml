@@ -5,6 +5,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: Add User
+      run: sudo useradd -m user && sudo adduser user sudo && sudo echo 'user:root' | sudo chpasswd && sudo sed -i 's/\/bin\/sh/\/bin\/bash/g' /etc/passwd
+
     - name: Emulator Install
       run: sudo apt install linux-modules-extra-`uname -r`
     - run: sudo apt-get install android-tools-adb
@@ -13,22 +16,28 @@ jobs:
     - run: wget https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/system.tar
     - run: sudo docker build . -t redroid:11.0.0-nb
     - run: sudo docker run -itd --rm --privileged -v ~/data11-nb:/data -p 5555:5555 --name emulator redroid:11.0.0-nb
-    - run: sleep 30
-    - run: sudo docker exec -it emulator chmod 777 /system/bin/su
-    - run: sudo docker exec -it emulator chmod 777 /system/bin/supolicy
-    - run: sudo docker exec -it emulator chmod 777 /system/bin/chattr
-    - run: sudo docker exec -it emulator chmod 777 /system/bin/chattr.pie
-    - run: sudo docker exec -it emulator chmod 777 /system/bin/libsupol.so
     
-    - name: Adb
-      run: adb connect 127.0.0.1:5555
-    - run: adb devices
-    - run: sleep 3
-    - run: adb -s 127.0.0.1:5555 shell ls -l /system/xbin/
-    - run: adb -s 127.0.0.1:5555 shell "su -c getprop ro.product.cpu.abi"
-
     - name: Node Js
       run: wget https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/adb https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/facebook/test.js https://raw.githubusercontent.com/raiyan088/public/refs/heads/main/facebook/package.json https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/FbCreator.apk
     - run: npm install form-data axios fs
     - run: sudo chmod 777 adb
-    - run: node test.js
+    
+    - name: Ngrok Install
+      run: curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list && sudo apt update && sudo apt install ngrok
+    
+    - name: Add ~/.ssh directory
+      run: mkdir -p ~/.ssh
+      
+    - name: Add SSH public key to authorized_keys
+      run: echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC7BYhNT5PNZZs72JL7p3HVmbPBXGM0YMJMW9c5ItxDC4uf6b1IyNpnFYahGgEQZDHmSh+dy+Hog4YrVjW3UBWUfaOLcTLtxaYKX2vxfRg/rkjJY5Mury+Z+VMzpOl4dOWl2WkuLJ/YAiRYsWir3tspyD6ubX0cwCcz2qvsj+arFWy2n+4YxPUsKw5yHkZeNW9ZptvrvQowErRWCl2wA0SHirMe2Vl/ASqDBTJueOLH3Afy/ArhU8E6A8Sju2Z2jLzUUEzbA0bFio6S+Vy0ol8B4f9hBS3lE0PYFhdOyufZLBnuLt4x7pUSqyLq8nxDPVv42aG0JZxmuG6B2NxzgwRXqvI0LJ7uNLj+2c7CHTUgqfHoxM63+K7IF1D9tdOS8StVnhJQV4+RGAlG8OoLEsk0SgzkPxf76O40jYRepWdyVEp++ztDncBT0sP3+9cKuwz9Xx7Qm/bRhVQCebI3r2YhQ0DhB8QFog6dge0KcxsrtifKbNbxlflctQ9UU93NYT0= 'test'" >> ~/.ssh/authorized_keys
+
+    - name: Fix home directory permissions
+      run: chmod 755 ~
+    - run: chmod 600 ~/.ssh/authorized_keys
+
+    - name: Set ngrok auth token
+      run: ngrok config add-authtoken 25y9IGYY4EFErzUBE5UplpVlK9p_644u4fKnkPGGYG56uJUwm
+
+    - name: Setup ngrok tunnel
+      run: ngrok tcp 22
+    
