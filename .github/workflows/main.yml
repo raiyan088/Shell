@@ -20,4 +20,4 @@ jobs:
     - run: sleep 5
     - run: adb connect 127.0.0.1:5555
     - run: sleep 10
-    - run: adb shell ls -l /system/bin/ndk_translation_program_runner_binfmt_misc_arm64
+    - run: adb -s 127.0.0.1:5555 shell ls -l /system/bin/ndk_translation_program_runner_binfmt_misc_arm64
