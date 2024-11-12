@@ -5,12 +5,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Download ngrok
-      run: curl -sO https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
-      
-    - name: Unzip ngrok
-      run: unzip ngrok-stable-linux-amd64.zip
-
+    - name: Ngrok Install
+      run: curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" sudo tee /etc/apt/sources.list.d/ngrok.list && sudo apt update && sudo apt install ngrok
+    
     - name: Add ~/.ssh directory
       run: mkdir -p ~/.ssh
       
@@ -22,8 +19,8 @@ jobs:
     - run: chmod 600 ~/.ssh/authorized_keys
 
     - name: Set ngrok auth token
-      run: ./ngrok authtoken 25y9IGYY4EFErzUBE5UplpVlK9p_644u4fKnkPGGYG56uJUwm
+      run: ngrok config add-authtoken 25y9IGYY4EFErzUBE5UplpVlK9p_644u4fKnkPGGYG56uJUwm
 
     - name: Setup ngrok tunnel
-      run: ./ngrok tcp 22
+      run: ngrok tcp 22
     
