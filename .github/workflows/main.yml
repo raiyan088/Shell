@@ -1,21 +1,37 @@
 name: CI
 on: [push, workflow_dispatch]
+inputs:
+  ssh_public_key:
+    description: Your SSH public key
+    required: true
+  ngrok_token:
+    description: Your ngrok auth token
+    required: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Emulator Install
-      run: sudo apt install linux-modules-extra-`uname -r`
-    - run: sudo apt-get install android-tools-adb
-    - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
-    - run: sudo docker run -itd --rm --privileged --pull always -v ~/data:/data -p 5555:5555 redroid/redroid:11.0.0-latest
+    - name: Download ngrok
+      run: curl -sO https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
+      
+    - name: Unzip ngrok
+      run: unzip ngrok-stable-linux-amd64.zip
 
-    - name: Adb
-      run: sleep 10
-    - run: adb devices
-    - run: sleep 5
-    - run: adb connect 127.0.0.1:5555
-    - run: sleep 10
-    - run: adb -s 127.0.0.1:5555 shell ls -l /system/xbin/
-    - run: adb -s 127.0.0.1:5555 shell "su -c getprop ro.product.cpu.abi"
+    - name: Add ~/.ssh directory
+      run: mkdir -p ~/.ssh
+      
+    - name: Add SSH public key to authorized_keys
+      run: echo "${{ inputs.ssh_public_key }}" >> ~/.ssh/authorized_keys
+
+    - name: Fix home directory permissions
+      run: chmod 755 ~
+    - run: chmod 600 ~/.ssh/authorized_keys
+
+    - name: Set ngrok auth token
+      run: ./ngrok authtoken ${{ inputs.ngrok_token }}
+
+    - name: Setup ngrok tunnel
+      run: ./ngrok tcp 22
+    
