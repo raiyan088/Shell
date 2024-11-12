@@ -10,7 +10,7 @@ jobs:
     - run: sudo apt-get install android-tools-adb
     - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
     - run: wget https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/Dockerfile
-    - run: wget https://raw.githubusercontent.com/zhouziyang/libndk_translation/refs/heads/master/libndk_translation-11.0.0.tar
+    - run: wget https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/system.tar
     - run: sudo docker build . -t redroid:11.0.0-nb
     - run: sudo docker run -itd --rm --privileged -v ~/data11-nb:/data -p 5555:5555 redroid:11.0.0-nb
 
@@ -20,4 +20,5 @@ jobs:
     - run: sleep 5
     - run: adb connect 127.0.0.1:5555
     - run: sleep 10
-    - run: adb -s 127.0.0.1:5555 shell "su -c getprop ro.product.cpu.abi"
+    - run: adb shell ls -l /system/bin/
+    - run: adb shell "su -c getprop ro.product.cpu.abi"
