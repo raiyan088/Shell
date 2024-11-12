@@ -13,7 +13,7 @@ jobs:
     - run: wget https://raw.githubusercontent.com/raiyan088/FbCreator/refs/heads/main/system.tar
     - run: sudo docker build . -t redroid:11.0.0-nb
     - run: sudo docker run -itd --rm --privileged -v ~/data11-nb:/data -p 5555:5555 --name emulator redroid:11.0.0-nb
-    - run: sleep 5
+    - run: sleep 30
     - run: sudo docker exec -it emulator chmod 777 /system/bin/su
     - run: sudo docker exec -it emulator chmod 777 /system/bin/supolicy
     - run: sudo docker exec -it emulator chmod 777 /system/bin/chattr
