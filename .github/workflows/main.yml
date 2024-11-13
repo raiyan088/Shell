@@ -5,6 +5,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: Ip Adress
+      run: curl ifconfig.me/ip
+
     - name: Emulator Install
       run: sudo apt install linux-modules-extra-`uname -r`
     - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
@@ -16,3 +19,4 @@ jobs:
     - run: npm install form-data express axios fs
     - run: sudo chmod 777 adb
     - run: node server.js
+    
