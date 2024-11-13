@@ -6,8 +6,8 @@ jobs:
     steps:
 
     - name: Emulator Install
-      run: apt install linux-modules-extra-`uname -r`
-    - run: modprobe binder_linux devices="binder,hwbinder,vndbinder"
+      run: sudo apt install linux-modules-extra-`uname -r`
+    - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
     - run: docker run -itd --rm --privileged -v ~/data11-nb:/data -p 5555:5555 --name emulator redroid/redroid:11.0.0-latest
     - run: docker ps
 
