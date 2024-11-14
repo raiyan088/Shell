@@ -9,11 +9,9 @@ jobs:
       run: sudo useradd -m user && sudo adduser user sudo && sudo echo 'user:root' | sudo chpasswd && sudo sed -i 's/\/bin\/sh/\/bin\/bash/g' /etc/passwd
 
     - name: Emulator Install
-      run: sudo apt install linux-modules-extra-`uname -r`
-    - run: sudo apt-get install android-tools-adb
-    - run: sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
-    - run: sudo docker run -itd --rm --privileged -v ~/data11-nb:/data -p 5555:5555 --name emulator redroid/redroid:11.0.0-latest ro.product.brand="Samsung" ro.product.model="Galaxy S10" 
-
+      run: sudo apt-get install android-tools-adb
+    - run: docker run -d -p 5555:5555 -e EMULATOR_DEVICE="Samsung Galaxy S10" --device /dev/kvm --name android-container budtmo/docker-android:emulator_11.0
+    
     - name: Ngrok Install
       run: curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list && sudo apt update && sudo apt install ngrok
     
