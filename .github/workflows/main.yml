@@ -32,8 +32,8 @@ jobs:
     - name: NPM Install
       run: npm install fs
 
-    - name: Node Start
-      run: node server
+    # - name: Node Start
+      # run: node server
 
     - name: Ngrok Tools
       run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
