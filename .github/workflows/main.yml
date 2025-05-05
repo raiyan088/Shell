@@ -5,27 +5,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y python3-pip wget curl unzip
-          pip3 install proxy.py
+    - name: Install Python & cloudflared
+      run: |
+        sudo apt update
+        sudo apt install -y python3-pip wget curl
+        pip install --upgrade proxy.py
 
-      - name: Start local HTTPS proxy
-        run: |
-          nohup proxy --hostname 0.0.0.0 --port 8080 > proxy.log 2>&1 &
+        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -O cloudflared.deb
+        sudo dpkg -i cloudflared.deb
 
-      - name: Install cloudflared
-        run: |
-          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared-linux-amd64.deb
+    - name: Start proxy.py server
+      run: |
+        nohup proxy --hostname 127.0.0.1 --port 8080 > proxy.log 2>&1 &
 
-      - name: Start Cloudflare Tunnel
-        run: |
-          nohup cloudflared tunnel --url http://localhost:8080 > tunnel.log 2>&1 &
-          sleep 10
-          echo "=== Tunnel Log ==="
-          cat tunnel.log
+    - name: Start Cloudflare Tunnel
+      run: |
+        nohup cloudflared tunnel --url http://localhost:8080 > cloudflared.log 2>&1 &
 
-      - name: Keep alive
-        run: sleep 3600
+    - name: Wait for Tunnel and Show URL
+      run: |
+        sleep 10
+        echo "========================"
+        echo "Proxy server is running"
+        echo "Tunnel URL (check below):"
+        tail -n 20 cloudflared.log | grep 'trycloudflare.com'
+        echo "========================"
