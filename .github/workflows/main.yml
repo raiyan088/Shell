@@ -1,22 +1,39 @@
-name: HTTPS Proxy with Ngrok
-
+name: CI
 on: [push, workflow_dispatch]
-
 jobs:
-  proxy:
+  build:
     runs-on: ubuntu-latest
     steps:
-    - name: Install Dependencies
+
+    - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y tinyproxy wget unzip curl
+        sudo apt install -y dante-server wget unzip curl net-tools
 
-    - name: Configure Tinyproxy
+    - name: Configure Dante SOCKS5 server
       run: |
-        sudo sed -i 's/^Port .*/Port 8888/' /etc/tinyproxy/tinyproxy.conf
-        sudo sed -i 's/^Allow 127.0.0.1/#Allow 127.0.0.1/' /etc/tinyproxy/tinyproxy.conf
-        echo "Allow 0.0.0.0" | sudo tee -a /etc/tinyproxy/tinyproxy.conf
-        sudo systemctl restart tinyproxy
+        cat <<EOF | sudo tee /etc/danted.conf
+        logoutput: stderr
+        internal: 0.0.0.0 port = 1080
+        external: $(hostname -I | awk '{print $1}')
+        method: none
+        user.notprivileged: nobody
+
+        client pass {
+            from: 0.0.0.0/0 to: 0.0.0.0/0
+            log: error
+        }
+
+        pass {
+            from: 0.0.0.0/0 to: 0.0.0.0/0
+            log: error
+            protocol: tcp udp
+            method: none
+        }
+        EOF
+
+    - name: Start Dante server
+      run: sudo danted -f /etc/danted.conf &
 
     - name: Install ngrok
       run: |
@@ -25,19 +42,15 @@ jobs:
         sudo mv ngrok /usr/local/bin/
         rm ngrok-stable-linux-amd64.zip
 
-    - name: Set ngrok authtoken
+    - name: Set Ngrok Authtoken
       run: ngrok config add-authtoken 2YMpPG6ws3Y1x5unwwSlUNVs3Wu_67JPAFd2MmxAo7cBVK7Lq
 
-    - name: Start ngrok HTTP tunnel
-      run: nohup ngrok http 8888 > /tmp/ngrok.log 2>&1 &
+    - name: Start Ngrok TCP Tunnel
+      run: nohup ngrok tcp 1080 > /tmp/ngrok.log 2>&1 &
 
-    - name: Wait and Show Tunnel URL
+    - name: Wait and Fetch Ngrok URL
       run: |
-        sleep 10
-        echo "========================"
-        echo "HTTPS Proxy is running"
-        curl -s http://localhost:4040/api/tunnels | grep -oE 'https://[^"]+'
-        echo "========================"
-
-    - name: Keep Alive
-      run: sleep 3600
+        sleep 8
+        curl -s http://localhost:4040/api/tunnels > tunnels.json
+        cat tunnels.json | grep -oE 'tcp://[^"]+'
+    - run: sleep 100000
