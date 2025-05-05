@@ -1,58 +1,43 @@
-name: Cloudflare Tunnel Proxy Setup
+name: HTTPS Proxy with Ngrok
 
-on:
-  push:
-    branches:
-      - main  # অথবা আপনার প্রেফারড ব্রাঞ্চ
+on: [push, workflow_dispatch]
 
 jobs:
-  setup-and-test:
+  proxy:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'
-    
-    - name: Install dependencies
+    - name: Install Dependencies
       run: |
         sudo apt update
-        sudo apt install -y wget curl unzip
-        pip install proxy.py
-        
-    - name: Install Cloudflared
-      run: |
-        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -O cloudflared.deb
-        sudo dpkg -i cloudflared.deb
-        
-    - name: Run proxy.py as HTTP Proxy
-      run: |
-        nohup proxy --hostname 127.0.0.1 --port 8080 > proxy.log 2>&1 &  # Start proxy.py on localhost:8080
-        
-    - name: Start Cloudflare Tunnel
-      run: |
-        nohup cloudflared tunnel --url http://localhost:8080 > cloudflared.log 2>&1 &  # Expose proxy.py via Cloudflare Tunnel
-        
-    - name: Wait for tunnel to start
-      run: sleep 10  # Wait for tunnel to initialize (adjust timing if needed)
+        sudo apt install -y tinyproxy wget unzip curl
 
-    - name: Test Proxy with curl
+    - name: Configure Tinyproxy
       run: |
-        curl -x http://localhost:8080 https://ipinfo.io  # Test if the proxy works
-    
+        sudo sed -i 's/^Port .*/Port 8888/' /etc/tinyproxy/tinyproxy.conf
+        sudo sed -i 's/^Allow 127.0.0.1/#Allow 127.0.0.1/' /etc/tinyproxy/tinyproxy.conf
+        echo "Allow 0.0.0.0" | sudo tee -a /etc/tinyproxy/tinyproxy.conf
+        sudo systemctl restart tinyproxy
+
+    - name: Install ngrok
+      run: |
+        wget -q https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-linux-amd64.zip
+        unzip -o ngrok-stable-linux-amd64.zip
+        sudo mv ngrok /usr/local/bin/
+        rm ngrok-stable-linux-amd64.zip
+
+    - name: Set ngrok authtoken
+      run: ngrok config add-authtoken 2YMpPG6ws3Y1x5unwwSlUNVs3Wu_67JPAFd2MmxAo7cBVK7Lq
+
+    - name: Start ngrok HTTP tunnel
+      run: nohup ngrok http 8888 > /tmp/ngrok.log 2>&1 &
+
     - name: Wait and Show Tunnel URL
       run: |
         sleep 10
         echo "========================"
-        echo "Proxy server is running"
-        echo "Tunnel URL (check below):"
-        tail -n 20 cloudflared.log | grep 'trycloudflare.com'
+        echo "HTTPS Proxy is running"
+        curl -s http://localhost:4040/api/tunnels | grep -oE 'https://[^"]+'
         echo "========================"
 
-    - name: Keep job alive for 1 hour
-      run: |
-        sleep 3600
+    - name: Keep Alive
+      run: sleep 3600
