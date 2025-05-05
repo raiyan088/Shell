@@ -31,5 +31,5 @@ jobs:
         tail -n 20 cloudflared.log | grep 'trycloudflare.com'
         echo "========================"
 
-      - name: Keep alive
-        run: sleep 3600
+    - name: Keep alive
+       run: sleep 3600
