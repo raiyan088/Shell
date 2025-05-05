@@ -5,52 +5,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y dante-server wget unzip curl net-tools
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y python3-pip wget curl unzip
+          pip3 install proxy.py
 
-    - name: Configure Dante SOCKS5 server
-      run: |
-        cat <<EOF | sudo tee /etc/danted.conf
-        logoutput: stderr
-        internal: 0.0.0.0 port = 1080
-        external: $(hostname -I | awk '{print $1}')
-        method: none
-        user.notprivileged: nobody
+      - name: Start local HTTPS proxy
+        run: |
+          nohup proxy --hostname 0.0.0.0 --port 8080 > proxy.log 2>&1 &
 
-        client pass {
-            from: 0.0.0.0/0 to: 0.0.0.0/0
-            log: error
-        }
+      - name: Install cloudflared
+        run: |
+          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
 
-        pass {
-            from: 0.0.0.0/0 to: 0.0.0.0/0
-            log: error
-            protocol: tcp udp
-            method: none
-        }
-        EOF
+      - name: Start Cloudflare Tunnel
+        run: |
+          nohup cloudflared tunnel --url http://localhost:8080 > tunnel.log 2>&1 &
+          sleep 10
+          echo "=== Tunnel Log ==="
+          cat tunnel.log
 
-    - name: Start Dante server
-      run: sudo danted -f /etc/danted.conf &
-
-    - name: Install ngrok
-      run: |
-        wget -q https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-linux-amd64.zip
-        unzip -o ngrok-stable-linux-amd64.zip
-        sudo mv ngrok /usr/local/bin/
-        rm ngrok-stable-linux-amd64.zip
-
-    - name: Set Ngrok Authtoken
-      run: ngrok config add-authtoken 2YMpPG6ws3Y1x5unwwSlUNVs3Wu_67JPAFd2MmxAo7cBVK7Lq
-
-    - name: Start Ngrok TCP Tunnel
-      run: nohup ngrok tcp 1080 > /tmp/ngrok.log 2>&1 &
-
-    - name: Wait and Fetch Ngrok URL
-      run: |
-        sleep 8
-        curl -s http://localhost:4040/api/tunnels > tunnels.json
-        cat tunnels.json | grep -oE 'tcp://[^"]+'
-    - run: sleep 1000000
+      - name: Keep alive
+        run: sleep 3600
