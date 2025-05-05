@@ -6,5 +6,10 @@ jobs:
     steps:
 
     - name: Test
-      run: sudo wget -O /etc/systemd/system/danted.service https://raw.githubusercontent.com/raiyan088/Shell/refs/heads/main/danted.service
+      run: sudo bash -c 'echo -e "[Unit]\nDescription=Dante SOCKS5 Proxy\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=/usr/sbin/danted -f /etc/danted.conf\nUser=root\n\n[Install]\nWantedBy=multi-user.target" > /etc/systemd/system/danted.service'
+    - run: sudo systemctl daemon-reexec
+    - run: sudo systemctl daemon-reload
+    - run: sudo systemctl enable danted
+    - run: sudo systemctl start danted
+    - run: sudo systemctl status danted
     
