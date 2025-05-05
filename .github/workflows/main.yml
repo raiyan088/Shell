@@ -30,5 +30,6 @@ jobs:
         echo "Tunnel URL (check below):"
         tail -n 20 cloudflared.log | grep 'trycloudflare.com'
         echo "========================"
-        
-        - run: sleep 3600
+
+      - name: Keep alive
+        run: sleep 3600
