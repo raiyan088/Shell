@@ -1,0 +1,11 @@
+[Unit]
+Description=Dante SOCKS5 Proxy
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/danted -f /etc/danted.conf
+User=root
+
+[Install]
+WantedBy=multi-user.target
