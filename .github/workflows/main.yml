@@ -44,6 +44,15 @@ jobs:
       run: |
         curl -x http://localhost:8080 https://ipinfo.io  # Test if the proxy works
     
-    - name: Check proxy output
+    - name: Wait and Show Tunnel URL
       run: |
-        tail -n 10 proxy.log  # Print last 10 lines of proxy.py log to confirm it's working
+        sleep 10
+        echo "========================"
+        echo "Proxy server is running"
+        echo "Tunnel URL (check below):"
+        tail -n 20 cloudflared.log | grep 'trycloudflare.com'
+        echo "========================"
+
+    - name: Keep job alive for 1 hour
+      run: |
+        sleep 3600
