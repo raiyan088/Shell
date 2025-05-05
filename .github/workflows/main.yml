@@ -32,4 +32,4 @@ jobs:
         echo "========================"
 
     - name: Keep job alive for 1 hour
-      run: sleep 3600
+      run: sleep 3600
