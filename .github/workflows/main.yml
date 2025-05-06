@@ -1,43 +1,46 @@
-name: HTTPS Proxy via Cloudflared
-
+name: HTTPS Proxy via Squid
 on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
     - name: Install Squid Proxy
       run: |
         sudo apt update
-        sudo apt install -y squid curl
+        sudo apt install -y squid wget unzip curl
 
     - name: Configure Squid
       run: |
         sudo tee /etc/squid/squid.conf > /dev/null <<EOF
         http_port 3128
-        acl all src all
+        acl all src 0.0.0.0/0
         http_access allow all
         access_log stdio:/dev/stdout
         EOF
 
-    - name: Start Squid Proxy
+    - name: Start Squid
       run: sudo systemctl restart squid
 
-    - name: Install Cloudflared
+    - name: Install ngrok
       run: |
-        curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
-        chmod +x cloudflared
-        sudo mv cloudflared /usr/local/bin/
+        wget -q https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-linux-amd64.zip
+        unzip -o ngrok-stable-linux-amd64.zip
+        sudo mv ngrok /usr/local/bin/
+        rm ngrok-stable-linux-amd64.zip
 
-    - name: Start Cloudflared Tunnel (Squid Port 3128)
-      run: |
-        nohup cloudflared tunnel --url http://localhost:3128 --no-autoupdate > /tmp/cloudflared.log 2>&1 &
+    - name: Set Ngrok Authtoken
+      run: ngrok config add-authtoken 2YMpPG6ws3Y1x5unwwSlUNVs3Wu_67JPAFd2MmxAo7cBVK7Lq
 
-    - name: Wait and Fetch Tunnel URL
+    - name: Start Ngrok TCP Tunnel
+      run: nohup ngrok tcp 3128 > /tmp/ngrok.log 2>&1 &
+
+    - name: Wait and Show Ngrok URL
       run: |
         sleep 8
-        cat /tmp/cloudflared.log | grep -o 'https://[^ ]*trycloudflare.com' || echo "Waiting failed or URL not found"
+        curl -s http://localhost:4040/api/tunnels > tunnels.json
+        proxy_url=$(grep -oE 'tcp://[^"]+' tunnels.json)
+        echo "HTTPS Proxy URL: $proxy_url"
 
-    - name: Keep alive
+    - name: Keep Alive
       run: tail -f /dev/null
