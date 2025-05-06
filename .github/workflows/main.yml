@@ -1,29 +1,26 @@
-name: HTTP Proxy via TinyProxy
+name: HTTPS Proxy via Squid
 on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-
-    - name: Install dependencies
+    - name: Install Squid Proxy
       run: |
         sudo apt update
-        sudo apt install -y tinyproxy wget unzip curl
+        sudo apt install -y squid wget unzip curl
 
-    - name: Configure TinyProxy
+    - name: Configure Squid
       run: |
-        sudo tee /etc/tinyproxy/tinyproxy.conf > /dev/null <<EOF
-        Port 8888
-        Listen 0.0.0.0
-        Timeout 600
-        LogLevel Info
-        MaxClients 100
-        Allow 0.0.0.0/0
+        sudo tee /etc/squid/squid.conf > /dev/null <<EOF
+        http_port 3128
+        acl all src 0.0.0.0/0
+        http_access allow all
+        access_log stdio:/dev/stdout
         EOF
 
-    - name: Start TinyProxy
-      run: sudo systemctl restart tinyproxy
+    - name: Start Squid
+      run: sudo systemctl restart squid
 
     - name: Install ngrok
       run: |
@@ -36,14 +33,14 @@ jobs:
       run: ngrok config add-authtoken 2YMpPG6ws3Y1x5unwwSlUNVs3Wu_67JPAFd2MmxAo7cBVK7Lq
 
     - name: Start Ngrok TCP Tunnel
-      run: nohup ngrok tcp 8888 > /tmp/ngrok.log 2>&1 &
+      run: nohup ngrok tcp 3128 > /tmp/ngrok.log 2>&1 &
 
     - name: Wait and Show Ngrok URL
       run: |
         sleep 8
         curl -s http://localhost:4040/api/tunnels > tunnels.json
         proxy_url=$(grep -oE 'tcp://[^"]+' tunnels.json)
-        echo "HTTP Proxy URL: $proxy_url"
+        echo "HTTPS Proxy URL: $proxy_url"
 
     - name: Keep Alive
       run: tail -f /dev/null
