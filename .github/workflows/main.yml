@@ -1,5 +1,6 @@
-name: CI
+name: HTTP Proxy via TinyProxy
 on: [push, workflow_dispatch]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -8,32 +9,21 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y dante-server wget unzip curl net-tools
+        sudo apt install -y tinyproxy wget unzip curl
 
-    - name: Configure Dante SOCKS5 server
+    - name: Configure TinyProxy
       run: |
-        cat <<EOF | sudo tee /etc/danted.conf
-        logoutput: stderr
-        internal: 0.0.0.0 port = 1080
-        external: $(hostname -I | awk '{print $1}')
-        method: none
-        user.notprivileged: nobody
-
-        client pass {
-            from: 0.0.0.0/0 to: 0.0.0.0/0
-            log: error
-        }
-
-        pass {
-            from: 0.0.0.0/0 to: 0.0.0.0/0
-            log: error
-            protocol: tcp udp
-            method: none
-        }
+        sudo tee /etc/tinyproxy/tinyproxy.conf > /dev/null <<EOF
+        Port 8888
+        Listen 0.0.0.0
+        Timeout 600
+        LogLevel Info
+        MaxClients 100
+        Allow 0.0.0.0/0
         EOF
 
-    - name: Start Dante server
-      run: sudo danted -f /etc/danted.conf &
+    - name: Start TinyProxy
+      run: sudo systemctl restart tinyproxy
 
     - name: Install ngrok
       run: |
@@ -46,12 +36,14 @@ jobs:
       run: ngrok config add-authtoken 2YMpPG6ws3Y1x5unwwSlUNVs3Wu_67JPAFd2MmxAo7cBVK7Lq
 
     - name: Start Ngrok TCP Tunnel
-      run: nohup ngrok tcp 1080 > /tmp/ngrok.log 2>&1 &
+      run: nohup ngrok tcp 8888 > /tmp/ngrok.log 2>&1 &
 
-    - name: Wait and Fetch Ngrok URL
+    - name: Wait and Show Ngrok URL
       run: |
         sleep 8
         curl -s http://localhost:4040/api/tunnels > tunnels.json
-        cat tunnels.json | grep -oE 'tcp://[^"]+'
-        
-    - run: sleep 3600
+        proxy_url=$(grep -oE 'tcp://[^"]+' tunnels.json)
+        echo "HTTP Proxy URL: $proxy_url"
+
+    - name: Keep Alive
+      run: tail -f /dev/null
