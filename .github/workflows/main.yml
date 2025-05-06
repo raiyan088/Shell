@@ -1,82 +1,32 @@
-name: FRP SOCKS5 Proxy with TryCloudflare Tunnel
+name: Setup Cloudflare Tunnel with Named Tunnel
 
 on:
   workflow_dispatch:
   push:
 
 jobs:
-  deploy-frp:
+  deploy-cloudflared:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install FRP (frps and frpc)
-      run: |
-        wget https://github.com/fatedier/frp/releases/download/v0.58.0/frp_0.58.0_linux_amd64.tar.gz
-        tar -xzf frp_0.58.0_linux_amd64.tar.gz
-        sudo mv frp_0.58.0_linux_amd64/frps /usr/local/bin/
-        sudo mv frp_0.58.0_linux_amd64/frpc /usr/local/bin/
-
-    - name: Create frps.ini (Server Config)
-      run: |
-        cat <<EOF > frps.ini
-        [common]
-        bind_addr = 0.0.0.0
-        bind_port = 7000
-        dashboard_port = 7500
-        dashboard_user = admin
-        dashboard_pwd = admin
-        EOF
-
-    - name: Run frps server
-      run: nohup frps -c frps.ini &
-
-    - name: Install TryCloudflare and Create Tunnel
+    - name: Install Cloudflared
       run: |
         wget https://github.com/cloudflare/cloudflared/releases/download/2025.4.2/cloudflared-linux-amd64.deb
         sudo dpkg -i cloudflared-linux-amd64.deb
-        cloudflared tunnel --url http://localhost:7000 --no-autoupdate --hostname trycloudflare.com &
 
-    - name: Create frpc.ini (Client Config for SOCKS5)
+    - name: Authenticate Cloudflared Tunnel
+      run: cloudflared tunnel login
+
+    - name: Create Tunnel and Start It
       run: |
-        cat <<EOF > frpc.ini
-        [common]
-        server_addr = 127.0.0.1
-        server_port = 7000
+        cloudflared tunnel create <your-tunnel-name>
+        cat <<EOF > /root/.cloudflared/config.yml
+        tunnel: <your-tunnel-UUID>
+        credentials-file: /root/.cloudflared/<your-tunnel-UUID>.json
 
-        [socks]
-        type = tcp
-        local_ip = 127.0.0.1
-        local_port = 1080
-        remote_port = 6000
+        ingress:
+          - hostname: <your-public-subdomain>.trycloudflare.com
+            service: http://localhost:1080
+          - service: http_status:404
         EOF
-
-    - name: Run frpc (client)
-      run: nohup frpc -c frpc.ini &
-
-    - name: Run Dante SOCKS5 server
-      run: |
-        sudo apt update
-        sudo apt install -y dante-server
-        cat <<EOF | sudo tee /etc/danted.conf
-        logoutput: stderr
-        internal: 0.0.0.0 port = 1080
-        external: $(hostname -I | awk '{print $1}')
-        method: none
-        user.notprivileged: nobody
-        client pass {
-          from: 0.0.0.0/0 to: 0.0.0.0/0
-          log: error
-        }
-        pass {
-          from: 0.0.0.0/0 to: 0.0.0.0/0
-          log: error
-          protocol: tcp udp
-          method: none
-        }
-        EOF
-        sudo danted -f /etc/danted.conf &
-
-    - name: Output proxy info
-      run: |
-        echo "FRP SOCKS5 Tunnel running on port 6000 (Server localhost)"
-        sleep 3600
+        cloudflared tunnel --config /root/.cloudflared/config.yml run
