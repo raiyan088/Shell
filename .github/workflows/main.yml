@@ -1,51 +1,43 @@
-name: Squid Proxy with Cloudflared (Debug Logs)
+name: Squid Cloudflared HTTP Proxy
 
 on: [push, workflow_dispatch]
 
 jobs:
-  proxy:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
+    
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y squid wget curl
+        sudo apt install -y squid curl wget
 
-    - name: Configure Squid Proxy
+    - name: Configure Squid for HTTP-only
       run: |
         sudo tee /etc/squid/squid.conf > /dev/null <<EOF
         http_port 3128
+        visible_hostname squid-proxy
+        acl all src all
         http_access allow all
+        http_access deny CONNECT all
         cache deny all
-        access_log /var/log/squid/access.log
+        access_log stdio:/var/log/squid/access.log
         EOF
-
-    - name: Start Squid
-      run: |
         sudo systemctl restart squid
-        sudo systemctl enable squid
-        sudo systemctl status squid
 
-    - name: Install cloudflared
+    - name: Download Cloudflared
       run: |
-        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared
-        chmod +x cloudflared
-        sudo mv cloudflared /usr/local/bin/
+        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+        chmod +x cloudflared-linux-amd64
+        sudo mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
 
-    - name: Start Cloudflared tunnel and show logs
+    - name: Start Cloudflared tunnel
       run: |
         nohup cloudflared tunnel --url http://localhost:3128 > cloudflared.log 2>&1 &
         sleep 10
-        echo "==== Cloudflared Log ===="
-        cat cloudflared.log
         echo "==== Cloudflared Tunnel URL ===="
-        grep -o 'https://[-a-z0-9]*\.trycloudflare.com' cloudflared.log || echo "Tunnel failed"
+        grep -o 'https://[-a-z0-9]*\.trycloudflare.com' cloudflared.log || echo "Tunnel URL not found"
+        echo "==== Full Cloudflared Log ===="
+        cat cloudflared.log
 
-    - name: Show Squid Access Log
-      run: |
-        echo "==== Squid Access Log ===="
-        sudo tail -n 20 /var/log/squid/access.log || echo "No log found"
-
-    - name: Keep Runner Alive for Testing
-      run: sleep 600
+    - run: sleep 3600
