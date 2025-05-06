@@ -1,4 +1,4 @@
-name: Squid Proxy with LocalTunnel
+name: Squid Proxy with Cloudflared
 
 on: [push, workflow_dispatch]
 
@@ -7,12 +7,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Squid Proxy
+    - name: Install dependencies (Squid, Cloudflared)
       run: |
         sudo apt update
-        sudo apt install -y squid nodejs npm
+        sudo apt install -y squid wget curl nodejs npm
 
-    - name: Configure Squid for basic HTTPS proxy
+    - name: Configure Squid Proxy for HTTPS
       run: |
         sudo tee /etc/squid/squid.conf > /dev/null <<EOF
         http_port 3128
@@ -21,20 +21,22 @@ jobs:
         access_log none
         EOF
 
-    - name: Start Squid
+    - name: Start Squid Proxy
       run: |
         sudo systemctl restart squid
         sudo systemctl enable squid
 
-    - name: Install LocalTunnel
+    - name: Install cloudflared
       run: |
-        npm install -g localtunnel
+        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared
+        chmod +x cloudflared
+        sudo mv cloudflared /usr/local/bin/
 
-    - name: Start LocalTunnel for Squid (port 3128)
+    - name: Start Cloudflared Tunnel
       run: |
-        lt --port 3128 > squid_tunnel.log 2>&1 &
+        nohup cloudflared tunnel --url http://localhost:3128 > cloudflared.log 2>&1 &
         sleep 5
-        cat squid_tunnel.log | grep -o 'https://.*\.loca\.lt' || echo "Tunnel failed"
+        cat cloudflared.log | grep -o 'https://.*\.trycloudflare.com' || echo "Tunnel failed"
 
-    - name: Keep Alive
+    - name: Keep Alive (for testing)
       run: sleep 3600
