@@ -1,57 +1,40 @@
-name: CI
-on: [push, workflow_dispatch]
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
+name: Squid Proxy with LocalTunnel
 
-    - name: Install dependencies
+on: [push, workflow_dispatch]
+
+jobs:
+  proxy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install Squid Proxy
       run: |
         sudo apt update
-        sudo apt install -y dante-server wget unzip curl net-tools
+        sudo apt install -y squid nodejs npm
 
-    - name: Configure Dante SOCKS5 server
+    - name: Configure Squid for basic HTTPS proxy
       run: |
-        cat <<EOF | sudo tee /etc/danted.conf
-        logoutput: stderr
-        internal: 0.0.0.0 port = 1080
-        external: $(hostname -I | awk '{print $1}')
-        method: none
-        user.notprivileged: nobody
-
-        client pass {
-            from: 0.0.0.0/0 to: 0.0.0.0/0
-            log: error
-        }
-
-        pass {
-            from: 0.0.0.0/0 to: 0.0.0.0/0
-            log: error
-            protocol: tcp udp
-            method: none
-        }
+        sudo tee /etc/squid/squid.conf > /dev/null <<EOF
+        http_port 3128
+        http_access allow all
+        cache deny all
+        access_log none
         EOF
 
-    - name: Start Dante server
-      run: sudo danted -f /etc/danted.conf &
-
-    - name: Install ngrok
+    - name: Start Squid
       run: |
-        wget -q https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-linux-amd64.zip
-        unzip -o ngrok-stable-linux-amd64.zip
-        sudo mv ngrok /usr/local/bin/
-        rm ngrok-stable-linux-amd64.zip
+        sudo systemctl restart squid
+        sudo systemctl enable squid
 
-    - name: Set Ngrok Authtoken
-      run: ngrok config add-authtoken 2YMpPG6ws3Y1x5unwwSlUNVs3Wu_67JPAFd2MmxAo7cBVK7Lq
-
-    - name: Start Ngrok TCP Tunnel
-      run: nohup ngrok tcp 1080 > /tmp/ngrok.log 2>&1 &
-
-    - name: Wait and Fetch Ngrok URL
+    - name: Install LocalTunnel
       run: |
-        sleep 8
-        curl -s http://localhost:4040/api/tunnels > tunnels.json
-        cat tunnels.json | grep -oE 'tcp://[^"]+'
-        
-    - run: sleep 3600
+        npm install -g localtunnel
+
+    - name: Start LocalTunnel for Squid (port 3128)
+      run: |
+        lt --port 3128 > squid_tunnel.log 2>&1 &
+        sleep 5
+        cat squid_tunnel.log | grep -o 'https://.*\.loca\.lt' || echo "Tunnel failed"
+
+    - name: Keep Alive
+      run: sleep 3600
