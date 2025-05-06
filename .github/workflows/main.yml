@@ -1,4 +1,4 @@
-name: Squid Proxy with Cloudflared
+name: Squid Proxy with Cloudflared (Debug Logs)
 
 on: [push, workflow_dispatch]
 
@@ -7,24 +7,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install dependencies (Squid, Cloudflared)
+    - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y squid wget curl nodejs npm
+        sudo apt install -y squid wget curl
 
-    - name: Configure Squid Proxy for HTTPS
+    - name: Configure Squid Proxy
       run: |
         sudo tee /etc/squid/squid.conf > /dev/null <<EOF
         http_port 3128
         http_access allow all
         cache deny all
-        access_log none
+        access_log /var/log/squid/access.log
         EOF
 
-    - name: Start Squid Proxy
+    - name: Start Squid
       run: |
         sudo systemctl restart squid
         sudo systemctl enable squid
+        sudo systemctl status squid
 
     - name: Install cloudflared
       run: |
@@ -32,11 +33,19 @@ jobs:
         chmod +x cloudflared
         sudo mv cloudflared /usr/local/bin/
 
-    - name: Start Cloudflared Tunnel
+    - name: Start Cloudflared tunnel and show logs
       run: |
         nohup cloudflared tunnel --url http://localhost:3128 > cloudflared.log 2>&1 &
-        sleep 5
-        cat cloudflared.log | grep -o 'https://.*\.trycloudflare.com' || echo "Tunnel failed"
+        sleep 10
+        echo "==== Cloudflared Log ===="
+        cat cloudflared.log
+        echo "==== Cloudflared Tunnel URL ===="
+        grep -o 'https://[-a-z0-9]*\.trycloudflare.com' cloudflared.log || echo "Tunnel failed"
 
-    - name: Keep Alive (for testing)
-      run: sleep 3600
+    - name: Show Squid Access Log
+      run: |
+        echo "==== Squid Access Log ===="
+        sudo tail -n 20 /var/log/squid/access.log || echo "No log found"
+
+    - name: Keep Runner Alive for Testing
+      run: sleep 600
