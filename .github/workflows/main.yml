@@ -54,4 +54,4 @@ jobs:
         curl -s http://localhost:4040/api/tunnels > tunnels.json
         cat tunnels.json | grep -oE 'tcp://[^"]+'
         
-    - run: sleep 100000
+    - run: sleep 3600
