@@ -6,22 +6,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Dante Proxy (HTTP)
+    - name: Install Dante Proxy
       run: |
         sudo apt update
         sudo apt install -y dante-server curl jq
 
-    - name: Configure Dante Proxy (HTTP)
+    - name: Configure Dante Proxy
       run: |
         sudo tee /etc/danted.conf > /dev/null <<EOF
         logoutput: /var/log/dante.log
-        internal: eth0 port = 3128
+        internal: eth0 port = 1080
         external: eth0
         method: username none
         user.notprivileged: nobody
         clientmethod: none
         socksmethod: none
-        http_port 3128
         EOF
 
     - name: Start Dante Proxy
@@ -37,16 +36,15 @@ jobs:
     - name: Set Ngrok Authtoken
       run: ngrok config add-authtoken 2YMpPG6ws3Y1x5unwwSlUNVs3Wu_67JPAFd2MmxAo7cBVK7Lq
 
-    - name: Start Ngrok HTTP Tunnel
-      run: nohup ngrok http 3128 > /tmp/ngrok.log 2>&1 &
+    - name: Start Ngrok TCP Tunnel
+      run: nohup ngrok tcp 1080 > /tmp/ngrok.log 2>&1 &
 
     - name: Wait and Show Ngrok URL
       run: |
         sleep 8
         curl -s http://localhost:4040/api/tunnels > tunnels.json
-        proxy_url=$(grep -oE 'http://[^"]+' tunnels.json)
-        echo "HTTP Proxy URL: $proxy_url"
+        proxy_url=$(grep -oE 'tcp://[^"]+' tunnels.json)
+        echo "SOCKS5 Proxy URL: $proxy_url"
 
     - name: Keep Alive
       run: tail -f /dev/null
-      
