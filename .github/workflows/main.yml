@@ -15,7 +15,7 @@ jobs:
     - name: Generate Self-Signed SSL Certificate
       run: |
         sudo mkdir -p /etc/squid/certs
-        openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
+        sudo openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
           -keyout /etc/squid/certs/squid.key -out /etc/squid/certs/squid.crt \
           -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=proxy.raiyan086.xyz"
         sudo chmod 600 /etc/squid/certs/*
