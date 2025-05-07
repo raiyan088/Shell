@@ -1,10 +1,9 @@
 name: Dante SOCKS5 with Cloudflared
 
-on:
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
-  tunnel:
+  frp-cloudflare:
     runs-on: ubuntu-latest
 
     steps:
