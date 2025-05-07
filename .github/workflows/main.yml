@@ -1,63 +1,73 @@
-name: Squid Proxy with Cloudflared
+name: HTTPS Squid Proxy via Cloudflare Tunnel
 
 on: [push, workflow_dispatch]
 
 jobs:
-  proxy:
+  deploy:
     runs-on: ubuntu-latest
 
-    name: Squid Proxy with Cloudflared Named Tunnel
-
     steps:
-    - name: Install Dependencies (Squid, Cloudflared)
+    - name: Install Dependencies
       run: |
         sudo apt update
-        sudo apt install -y squid wget curl
-    
-    - name: Configure Squid
+        sudo apt install -y squid openssl wget curl
+
+    - name: Generate Self-Signed SSL Certificate
+      run: |
+        sudo mkdir -p /etc/squid/certs
+        openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
+          -keyout squid.key -out squid.crt -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=proxy.raiyan086.xyz"
+        sudo mv squid.key /etc/squid/certs/
+        sudo mv squid.crt /etc/squid/certs/
+        sudo chmod 600 /etc/squid/certs/*
+
+    - name: Configure Squid for HTTPS
       run: |
         sudo tee /etc/squid/squid.conf > /dev/null <<EOF
-        http_port 3128
-        http_access allow all
+        https_port 3129 cert=/etc/squid/certs/squid.crt key=/etc/squid/certs/squid.key
         acl all src all
-        access_log /var/log/squid/access.log
+        http_access allow all
+        access_log stdio:/dev/stdout
+        cache deny all
         EOF
-    
+
+    - name: Restart Squid
+      run: |
         sudo systemctl restart squid
         sudo systemctl enable squid
-    
-    - name: Install cloudflared
+
+    - name: Download cloudflared
       run: |
         wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared
         chmod +x cloudflared
-        sudo mv cloudflared /usr/local/bin/
-    
-    - name: Authenticate Named Tunnel
+        sudo mv cloudflared /usr/local/bin/cloudflared
+
+    - name: Setup Cloudflared config
       run: |
-        sudo cloudflared service install eyJhIjoiYWM2NDc1NzkyZTJkNjY3ODc4M2JmMTFhOGI5MTFiYzciLCJ0IjoiZGM4MDBkZTktNjA0YS00NzUzLWIwZTgtYzIzZjViMmM3ZjM2IiwicyI6IllqQTBOelU1TlRJdFlqRTJNQzAwWXpJNExXRTBPRGd0T1RFek9UQTJaRFk0TURGaiJ9
-    
-    - name: Create config.yml for Named Tunnel
-      run: |
-        sudo mkdir -p /etc/cloudflared
-        cat <<EOF | sudo tee /etc/cloudflared/config.yml
-        tunnel: $(basename /etc/cloudflared/*.json .json)
-        credentials-file: /etc/cloudflared/$(basename /etc/cloudflared/*.json)
-    
+        mkdir -p ~/.cloudflared
+        tee ~/.cloudflared/config.yml > /dev/null <<EOF
+        tunnel: 3f3e7910-868d-4348-b908-0aa8de48d347
+        credentials-file: /home/runner/.cloudflared/creds.json
         ingress:
           - hostname: proxy.raiyan086.xyz
-            service: http://localhost:3128
+            service: https://localhost:3129
+            originRequest:
+              noTLSVerify: true
           - service: http_status:404
         EOF
-    
-    - name: Start cloudflared service
+
+    - name: Create Tunnel credentials file
       run: |
-        sudo systemctl enable cloudflared
-        sudo systemctl start cloudflared
-        sleep 5
-    
-    - name: Test Proxy with curl
+        echo 'eyJhIjoiYWM2NDc1NzkyZTJkNjY3ODc4M2JmMTFhOGI5MTFiYzciLCJ0IjoiM2YzZTc5MTAtODY4ZC00MzQ4LWI5MDgtMGFhOGRlNDhkMzQ3IiwicyI6IlltSm1ZMkZsTnpndE5EVXlPQzAwWXpreUxXSXhOMll0TnpNMU9HWXlaakZrTkRjeiJ9' > ~/.cloudflared/creds.json
+
+    - name: Start Cloudflared Tunnel
       run: |
-        curl -x http://proxy.raiyan086.xyz http://ipinfo.io || echo "Proxy test failed"
-    
+        cloudflared tunnel run 3f3e7910-868d-4348-b908-0aa8de48d347 &
+
+    - name: Wait & Test Proxy with curl
+      run: |
+        sleep 10
+        curl -x https://proxy.raiyan086.xyz https://ipinfo.io --proxy-insecure
+
     - name: Keep Alive
       run: tail -f /dev/null
