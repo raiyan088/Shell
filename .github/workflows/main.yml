@@ -1,11 +1,10 @@
-name: Dante SOCKS5 with Cloudflared
+name: Dante SOCKS5 with FRP and Cloudflared
 
 on: [push, workflow_dispatch]
 
 jobs:
-  frp-cloudflare:
+  setup-socks5-frp:
     runs-on: ubuntu-latest
-
     steps:
       - name: Install Dante SOCKS5
         run: |
@@ -30,7 +29,19 @@ jobs:
           sudo systemctl restart danted
           sudo systemctl enable danted
 
-      - name: Download and Install Cloudflared
+      - name: Download and Install FRP
+        run: |
+          wget https://github.com/fatedier/frp/releases/download/v0.45.0/frp_0.45.0_linux_amd64.tar.gz
+          tar -xvf frp_0.45.0_linux_amd64.tar.gz
+          cd frp_0.45.0_linux_amd64
+          sudo mv frpc /usr/local/bin/
+          sudo mv frps /usr/local/bin/
+
+      - name: Start FRP Client
+        run: |
+          nohup frpc -c <path_to_your_frpc_config_file> > frpc.log 2>&1 &
+        
+      - name: Install Cloudflared
         run: |
           wget -O cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
           chmod +x cloudflared
@@ -39,7 +50,7 @@ jobs:
       - name: Start Cloudflared Tunnel
         run: |
           nohup cloudflared tunnel --url http://localhost:1080 > tunnel.log 2>&1 &
-
+        
       - name: Wait for Tunnel URL
         run: |
           echo "Waiting for Cloudflared tunnel..."
@@ -57,4 +68,3 @@ jobs:
         run: |
           echo "Tunnel running. Sleeping forever..."
           tail -f /dev/null
-
