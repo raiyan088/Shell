@@ -24,8 +24,10 @@ jobs:
 
     - name: Restart Squid
       run: |
+        sudo systemctl stop squid || true
+        sudo rm -f /run/squid.pid
         sudo squid -z
-        sudo systemctl restart squid
+        sudo systemctl start squid
         sudo systemctl enable squid
 
     - name: Download cloudflared
