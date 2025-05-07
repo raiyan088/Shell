@@ -1,4 +1,4 @@
-name: HTTPS Squid Proxy via Cloudflare Tunnel
+name: HTTP Squid Proxy via Cloudflare Tunnel
 
 on: [push, workflow_dispatch]
 
@@ -10,20 +10,12 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt update
-        sudo apt install -y squid openssl wget curl
+        sudo apt install -y squid wget curl
 
-    - name: Generate Self-Signed SSL Certificate
-      run: |
-        sudo mkdir -p /etc/squid/certs
-        openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
-          -keyout /etc/squid/certs/squid.key -out /etc/squid/certs/squid.crt \
-          -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=proxy.raiyan086.xyz"
-        sudo chmod 600 /etc/squid/certs/*
-
-    - name: Configure Squid for HTTPS
+    - name: Configure Squid for HTTP
       run: |
         sudo tee /etc/squid/squid.conf > /dev/null <<EOF
-        https_port 3129 cert=/etc/squid/certs/squid.crt key=/etc/squid/certs/squid.key
+        http_port 3128
         acl localnet src all
         http_access allow localnet
         access_log stdio:/dev/stdout
@@ -50,9 +42,7 @@ jobs:
         credentials-file: /home/runner/.cloudflared/creds.json
         ingress:
           - hostname: proxy.raiyan086.xyz
-            service: https://localhost:3129
-            originRequest:
-              noTLSVerify: true
+            service: http://localhost:3128
           - service: http_status:404
         EOF
 
@@ -67,7 +57,7 @@ jobs:
     - name: Wait & Test Proxy with curl
       run: |
         sleep 10
-        curl -x https://proxy.raiyan086.xyz https://ipinfo.io --proxy-insecure
+        curl -x http://proxy.raiyan086.xyz http://ipinfo.io
 
     - name: Keep Alive
       run: tail -f /dev/null
