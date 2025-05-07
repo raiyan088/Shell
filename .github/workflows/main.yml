@@ -1,51 +1,55 @@
-name: HTTPS Proxy via Dante
+name: HTTPS Proxy via Squid
 on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Install Dante Proxy (HTTP)
+    - name: Install Squid Proxy
       run: |
         sudo apt update
-        sudo apt install -y dante-server curl jq
+        sudo apt install -y squid wget unzip curl
 
-    - name: Configure Dante Proxy (HTTP)
+    - name: Configure Squid
       run: |
-        sudo tee /etc/danted.conf > /dev/null <<EOF
-        logoutput: /var/log/dante.log
-        internal: eth0 port = 3128
-        external: eth0
-        method: username none
-        user.notprivileged: nobody
-        clientmethod: none
-        socksmethod: none
-        http_port 3128
+        sudo tee /etc/squid/squid.conf > /dev/null <<EOF
+        https_port 3128 ssl-bump cert=/etc/squid/squid.crt key=/etc/squid/squid.key
+        acl all src 0.0.0.0/0
+        http_access allow all
+        ssl_bump allow all
+        access_log stdio:/dev/stdout
         EOF
 
-    - name: Start Dante Proxy
-      run: sudo systemctl restart danted
-
-    - name: Install Ngrok
+    - name: Generate Self-Signed SSL Certificate
       run: |
-        curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc > /dev/null
-        echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
-        sudo apt update
-        sudo apt install -y ngrok
+        sudo openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
+          -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=proxy.local" \
+          -keyout squid.key -out squid.crt
+        sudo mv squid.crt /etc/squid/
+        sudo mv squid.key /etc/squid/
+
+    - name: Restart Squid with SSL
+      run: sudo systemctl restart squid
+
+    - name: Install ngrok
+      run: |
+        wget -q https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-linux-amd64.zip
+        unzip -o ngrok-stable-linux-amd64.zip
+        sudo mv ngrok /usr/local/bin/
+        rm ngrok-stable-linux-amd64.zip
 
     - name: Set Ngrok Authtoken
       run: ngrok config add-authtoken 2YMpPG6ws3Y1x5unwwSlUNVs3Wu_67JPAFd2MmxAo7cBVK7Lq
 
-    - name: Start Ngrok HTTP Tunnel
-      run: nohup ngrok http 3128 > /tmp/ngrok.log 2>&1 &
+    - name: Start Ngrok TCP Tunnel
+      run: nohup ngrok tcp 3128 > /tmp/ngrok.log 2>&1 &
 
     - name: Wait and Show Ngrok URL
       run: |
         sleep 8
         curl -s http://localhost:4040/api/tunnels > tunnels.json
-        proxy_url=$(grep -oE 'http://[^"]+' tunnels.json)
-        echo "HTTP Proxy URL: $proxy_url"
+        proxy_url=$(grep -oE 'tcp://[^"]+' tunnels.json)
+        echo "HTTPS Proxy URL: $proxy_url"
 
     - name: Keep Alive
       run: tail -f /dev/null
