@@ -10,26 +10,26 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt update
-        sudo apt install -y squid openssl wget curl
+        sudo apt install -y squid-openssl openssl wget curl
 
     - name: Generate Self-Signed SSL Certificate
       run: |
         sudo mkdir -p /etc/squid/certs
         sudo openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
           -keyout /etc/squid/certs/squid.key -out /etc/squid/certs/squid.crt \
-          -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=proxy.raiyan086.xyz"
+          -subj "/C=US/ST=Nowhere/L=None/O=Proxy/CN=proxy.raiyan086.xyz"
         sudo chmod 600 /etc/squid/certs/*
 
     - name: Configure Squid for HTTPS
       run: |
         sudo tee /etc/squid/squid.conf > /dev/null <<EOF
         https_port 3129 cert=/etc/squid/certs/squid.crt key=/etc/squid/certs/squid.key
-        acl localnet src all
-        http_access allow localnet
+        acl all src all
+        http_access allow all
         access_log stdio:/dev/stdout
         cache deny all
         EOF
-    
+
     - name: Restart Squid
       run: |
         sudo systemctl stop squid || true
@@ -37,7 +37,6 @@ jobs:
         sudo squid -z
         sudo systemctl start squid
         sudo systemctl enable squid
-
 
     - name: Download cloudflared
       run: |
