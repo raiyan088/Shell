@@ -17,19 +17,8 @@ jobs:
           # Backup the original squid.conf file
           sudo cp /etc/squid/squid.conf /etc/squid/squid.conf.bak
 
-          # Configure Squid to listen on port 3128
-          echo "
-http_port 3128
-
-# Allow all traffic (can be customized for your use case)
-http_access allow all
-
-# Enable caching (optional, depends on your use case)
-cache_mem 64 MB
-maximum_object_size_in_memory 8 KB
-maximum_object_size 100 MB
-cache_dir ufs /var/spool/squid 100 16 256
-" | sudo tee /etc/squid/squid.conf > /dev/null
+          # Configure Squid to listen on port 3128 (one line configuration)
+          sudo bash -c 'echo "http_port 3128\nhttp_access allow all\ncache_mem 64 MB\nmaximum_object_size_in_memory 8 KB\nmaximum_object_size 100 MB\ncache_dir ufs /var/spool/squid 100 16 256" > /etc/squid/squid.conf'
 
       - name: Start Squid Proxy Server
         run: |
