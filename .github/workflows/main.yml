@@ -1,82 +1,48 @@
-name: Dante SOCKS5 with FRP and Cloudflared
+name: Squid HTTP Proxy Server Setup
 
 on: [push, workflow_dispatch]
 
 jobs:
-  setup-socks5-frp:
+  setup-squid-proxy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install Dante SOCKS5
+      - name: Update and Install Squid
         run: |
           sudo apt update
-          sudo apt install -y dante-server
-          cat <<EOF | sudo tee /etc/danted.conf
-          logoutput: /var/log/danted.log
-          internal: 0.0.0.0 port = 1080
-          external: eth0
-          method: username none
-          user.notprivileged: nobody
-          client pass {
-            from: 0.0.0.0/0 to: 0.0.0.0/0
-            log: connect disconnect error
-          }
-          pass {
-            from: 0.0.0.0/0 to: 0.0.0.0/0
-            protocol: tcp udp
-            log: connect disconnect error
-          }
-          EOF
-          sudo systemctl restart danted
-          sudo systemctl enable danted
+          sudo apt install -y squid
 
-      - name: Download and Install FRP
+      - name: Configure Squid Proxy Server
         run: |
-          wget https://github.com/fatedier/frp/releases/download/v0.45.0/frp_0.45.0_linux_amd64.tar.gz
-          tar -xvf frp_0.45.0_linux_amd64.tar.gz
-          cd frp_0.45.0_linux_amd64
-          sudo mv frpc /usr/local/bin/
+          # Backup the original squid.conf file
+          sudo cp /etc/squid/squid.conf /etc/squid/squid.conf.bak
 
-      - name: Create frpc.ini
+          # Configure Squid to listen on port 3128
+          echo "
+http_port 3128
+
+# Allow all traffic (can be customized for your use case)
+http_access allow all
+
+# Enable caching (optional, depends on your use case)
+cache_mem 64 MB
+maximum_object_size_in_memory 8 KB
+maximum_object_size 100 MB
+cache_dir ufs /var/spool/squid 100 16 256
+" | sudo tee /etc/squid/squid.conf > /dev/null
+
+      - name: Start Squid Proxy Server
         run: |
-          cat <<EOF > frpc.ini
-          [common]
-          server_addr = your-frps-server.com
-          server_port = 7000
+          sudo systemctl restart squid
+          sudo systemctl enable squid
 
-          [socks5_proxy]
-          type = tcp
-          local_ip = 127.0.0.1
-          local_port = 1080
-          remote_port = 6000
-          EOF
-
-      - name: Start FRP Client
+      - name: Verify Squid Proxy Server
         run: |
-          nohup frpc -c frpc.ini > frpc.log 2>&1 &
+          # Verify Squid is running
+          sudo systemctl status squid
 
-      - name: Install Cloudflared
+      - name: Test Proxy Server with curl
         run: |
-          wget -O cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-          chmod +x cloudflared
-          sudo mv cloudflared /usr/local/bin/
-
-      - name: Start Cloudflared Tunnel
-        run: |
-          nohup cloudflared tunnel --url http://localhost:1080 > tunnel.log 2>&1 &
-
-      - name: Wait for Tunnel URL
-        run: |
-          echo "Waiting for Cloudflared tunnel..."
-          for i in {1..30}; do
-            if grep -o 'https://.*\.trycloudflare\.com' tunnel.log; then
-              grep -o 'https://.*\.trycloudflare\.com' tunnel.log > url.txt
-              break
-            fi
-            sleep 2
-          done
-          echo "Tunnel URL:"
-          cat url.txt
-
-      - name: Keep Action Alive
-        run: tail -f /dev/null
+          # Test the proxy server by sending a request via curl
+          echo "Testing proxy with curl..."
+          curl -x http://localhost:3128 http://ipinfo.io
