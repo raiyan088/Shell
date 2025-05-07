@@ -7,69 +7,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y squid-openssl openssl wget curl
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Generate Self-Signed SSL Certificate
-      run: |
-        sudo mkdir -p /etc/squid/certs
-        sudo openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
-          -keyout /etc/squid/certs/squid.key -out /etc/squid/certs/squid.crt \
-          -subj "/C=US/ST=Nowhere/L=None/O=Proxy/CN=proxy.raiyan086.xyz"
-        sudo chmod 600 /etc/squid/certs/*
+      - name: Install Dante and Ngrok
+        run: |
+          sudo apt update
+          sudo apt install -y dante-server curl jq
+          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc
+          echo "deb https://ngrok.com/download ngrok stable" | sudo tee /etc/apt/sources.list.d/ngrok.list
+          sudo apt update && sudo apt install ngrok
 
-    - name: Configure Squid for HTTPS
-      run: |
-        sudo tee /etc/squid/squid.conf > /dev/null <<EOF
-        https_port 3129 cert=/etc/squid/certs/squid.crt key=/etc/squid/certs/squid.key
-        acl all src all
-        http_access allow all
-        access_log stdio:/dev/stdout
-        cache deny all
-        EOF
+      - name: Setup Dante Proxy Server
+        run: |
+          sudo bash -c 'echo "
+          logoutput: /var/log/danted.log
+          internal: eth0 port = 1080
+          external: eth0
+          method: username none
+          user.privileged: root
+          user.unprivileged: nobody
+          clientmethod: none
+          socksmethod: username none
+          " > /etc/danted.conf'
 
-    - name: Restart Squid
-      run: |
-        sudo systemctl stop squid || true
-        sudo rm -f /run/squid.pid
-        sudo squid -z
-        sudo systemctl start squid
-        sudo systemctl enable squid
+          sudo systemctl start danted
 
-    - name: Download cloudflared
-      run: |
-        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared
-        chmod +x cloudflared
-        sudo mv cloudflared /usr/local/bin/cloudflared
+      - name: Setup and Run Ngrok Tunnel
+        run: |
+          ngrok authtoken 2YMpPG6ws3Y1x5unwwSlUNVs3Wu_67JPAFd2MmxAo7cBVK7Lq
+          nohup ngrok tcp 1080 > ngrok.log &
+          sleep 10
+          curl --silent http://localhost:4040/api/tunnels > tunnels.json
+          cat tunnels.json | jq
 
-    - name: Setup Cloudflared config
-      run: |
-        mkdir -p ~/.cloudflared
-        tee ~/.cloudflared/config.yml > /dev/null <<EOF
-        tunnel: 3f3e7910-868d-4348-b908-0aa8de48d347
-        credentials-file: /home/runner/.cloudflared/creds.json
-        ingress:
-          - hostname: proxy.raiyan086.xyz
-            service: https://localhost:3129
-            originRequest:
-              noTLSVerify: true
-          - service: http_status:404
-        EOF
-
-    - name: Create Tunnel credentials file
-      run: |
-        echo 'eyJhIjoiYWM2NDc1NzkyZTJkNjY3ODc4M2JmMTFhOGI5MTFiYzciLCJ0IjoiM2YzZTc5MTAtODY4ZC00MzQ4LWI5MDgtMGFhOGRlNDhkMzQ3IiwicyI6IlltSm1ZMkZsTnpndE5EVXlPQzAwWXpreUxXSXhOMll0TnpNMU9HWXlaakZrTkRjeiJ9' > ~/.cloudflared/creds.json
-
-    - name: Start Cloudflared Tunnel
-      run: |
-        cloudflared tunnel run 3f3e7910-868d-4348-b908-0aa8de48d347 &
-
-    - name: Wait & Test Proxy with curl
-      run: |
-        sleep 10
-        curl -x https://proxy.raiyan086.xyz https://ipinfo.io --proxy-insecure
-
-    - name: Keep Alive
-      run: tail -f /dev/null
+      - name: Keep Running
+        run: |
+          echo "Dante SOCKS5 Proxy is running on Ngrok TCP tunnel..."
+          tail -f /dev/null
