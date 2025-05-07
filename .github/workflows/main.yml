@@ -16,23 +16,23 @@ jobs:
       run: |
         sudo mkdir -p /etc/squid/certs
         openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
-          -keyout squid.key -out squid.crt -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=proxy.raiyan086.xyz"
-        sudo mv squid.key /etc/squid/certs/
-        sudo mv squid.crt /etc/squid/certs/
+          -keyout /etc/squid/certs/squid.key -out /etc/squid/certs/squid.crt \
+          -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=proxy.raiyan086.xyz"
         sudo chmod 600 /etc/squid/certs/*
 
     - name: Configure Squid for HTTPS
       run: |
         sudo tee /etc/squid/squid.conf > /dev/null <<EOF
         https_port 3129 cert=/etc/squid/certs/squid.crt key=/etc/squid/certs/squid.key
-        acl all src all
-        http_access allow all
+        acl localnet src all
+        http_access allow localnet
         access_log stdio:/dev/stdout
         cache deny all
         EOF
 
     - name: Restart Squid
       run: |
+        sudo squid -z
         sudo systemctl restart squid
         sudo systemctl enable squid
 
