@@ -1,32 +1,47 @@
-name: Setup Cloudflare Tunnel with Named Tunnel
+name: Cloudflare + FRP Proxy
 
-on:
-  workflow_dispatch:
-  push:
+on: [push, workflow_dispatch]
 
 jobs:
-  deploy-cloudflared:
+  frp-cloudflare:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Cloudflared
+    - name: Install Proxy (Dante for SOCKS5)
       run: |
-        wget https://github.com/cloudflare/cloudflared/releases/download/2025.4.2/cloudflared-linux-amd64.deb
-        sudo dpkg -i cloudflared-linux-amd64.deb
-
-    - name: Authenticate Cloudflared Tunnel
-      run: cloudflared tunnel login
-
-    - name: Create Tunnel and Start It
-      run: |
-        cloudflared tunnel create <your-tunnel-name>
-        cat <<EOF > /root/.cloudflared/config.yml
-        tunnel: <your-tunnel-UUID>
-        credentials-file: /root/.cloudflared/<your-tunnel-UUID>.json
-
-        ingress:
-          - hostname: <your-public-subdomain>.trycloudflare.com
-            service: http://localhost:1080
-          - service: http_status:404
+        sudo apt update
+        sudo apt install -y dante-server
+        cat <<EOF | sudo tee /etc/danted.conf
+        logoutput: stderr
+        internal: 127.0.0.1 port = 1080
+        external: $(hostname -I | awk '{print $1}')
+        method: none
+        user.notprivileged: nobody
+        client pass {
+          from: 0.0.0.0/0 to: 0.0.0.0/0
+          log: error
+        }
+        pass {
+          from: 0.0.0.0/0 to: 0.0.0.0/0
+          log: error
+          protocol: tcp udp
+          method: none
+        }
         EOF
-        cloudflared tunnel --config /root/.cloudflared/config.yml run
+        sudo danted -f /etc/danted.conf &
+
+    - name: Install cloudflared
+      run: |
+        wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+        chmod +x cloudflared-linux-amd64
+        sudo mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
+
+    - name: Run Cloudflared Tunnel
+      run: |
+        cloudflared service install eyJhIjoiYWNhMDRmMGYxZTRlOTFiZmI2Y2RjNWE2YzUxNTNlN2EiLCJ0IjoiZWE4YjNhZTktNGUyNi00MTc4LTk2YjItZTIxZTJhMmViMWE0IiwicyI6IlpUUmhZV0ZtTlRFdE9EUTRNaTAwWWpZMUxUbGlaRGt0TlRZeU5ESTFOREJpWkRVeiJ9
+        nohup cloudflared tunnel --url http://localhost:1080 > tunnel.log 2>&1 &
+        sleep 10
+        tail -n 20 tunnel.log
+
+    - name: Keep job alive
+      run: sleep 3600
