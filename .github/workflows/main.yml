@@ -1,47 +1,44 @@
-name: Cloudflare + FRP Proxy
+name: Expose SOCKS5 Proxy via Cloudflared
 
-on: [push, workflow_dispatch]
+on: push: branches: - main
 
-jobs:
-  frp-cloudflare:
-    runs-on: ubuntu-latest
+jobs: socks5-proxy: runs-on: ubuntu-latest
 
-    steps:
-    - name: Install Proxy (Dante for SOCKS5)
-      run: |
-        sudo apt update
-        sudo apt install -y dante-server
-        cat <<EOF | sudo tee /etc/danted.conf
-        logoutput: stderr
-        internal: 127.0.0.1 port = 1080
-        external: $(hostname -I | awk '{print $1}')
-        method: none
-        user.notprivileged: nobody
-        client pass {
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v3
+
+  - name: Install Dante SOCKS5 proxy
+    run: |
+      sudo apt update
+      sudo apt install -y dante-server
+      cat <<EOF | sudo tee /etc/danted.conf
+      logoutput: /var/log/danted.log
+      internal: 0.0.0.0 port = 1080
+      external: eth0
+      method: username none
+      user.notprivileged: nobody
+      client pass {
           from: 0.0.0.0/0 to: 0.0.0.0/0
-          log: error
-        }
-        pass {
+          log: connect disconnect error
+      }
+      pass {
           from: 0.0.0.0/0 to: 0.0.0.0/0
-          log: error
           protocol: tcp udp
-          method: none
-        }
-        EOF
-        sudo danted -f /etc/danted.conf &
+          log: connect disconnect error
+      }
+      EOF
+      sudo systemctl restart danted
 
-    - name: Install cloudflared
-      run: |
-        wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-        chmod +x cloudflared-linux-amd64
-        sudo mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
+  - name: Download and run cloudflared
+    run: |
+      wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared
+      chmod +x cloudflared
+      ./cloudflared tunnel --url socks5://localhost:1080 &
+      sleep 10
+      curl -s http://127.0.0.1:4040/quicktunnel | tee result.json
 
-    - name: Run Cloudflared Tunnel
-      run: |
-        sudo cloudflared service install eyJhIjoiYWM2NDc1NzkyZTJkNjY3ODc4M2JmMTFhOGI5MTFiYzciLCJ0IjoiZGM4MDBkZTktNjA0YS00NzUzLWIwZTgtYzIzZjViMmM3ZjM2IiwicyI6IllqQTBOelU1TlRJdFlqRTJNQzAwWXpJNExXRTBPRGd0T1RFek9UQTJaRFk0TURGaiJ9
-        nohup cloudflared tunnel --url http://localhost:1080 > tunnel.log 2>&1 &
-        sleep 10
-        tail -n 20 tunnel.log
-
-    - name: Keep job alive
-      run: sleep 3600
+  - name: Show tunnel URL
+    run: |
+      echo "Tunnel URL:"
+      cat result.json
