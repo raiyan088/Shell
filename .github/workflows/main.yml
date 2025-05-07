@@ -8,35 +8,26 @@ jobs:
     - name: Install Squid Proxy
       run: |
         sudo apt update
-        sudo apt install -y squid wget unzip curl
+        sudo apt install -y squid curl jq
 
     - name: Configure Squid
       run: |
         sudo tee /etc/squid/squid.conf > /dev/null <<EOF
-        https_port 3128 ssl-bump cert=/etc/squid/squid.crt key=/etc/squid/squid.key
+        http_port 3128
         acl all src 0.0.0.0/0
         http_access allow all
-        ssl_bump allow all
         access_log stdio:/dev/stdout
         EOF
 
-    - name: Generate Self-Signed SSL Certificate
-      run: |
-        sudo openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
-          -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=proxy.local" \
-          -keyout squid.key -out squid.crt
-        sudo mv squid.crt /etc/squid/
-        sudo mv squid.key /etc/squid/
-
-    - name: Restart Squid with SSL
+    - name: Start Squid
       run: sudo systemctl restart squid
 
     - name: Install ngrok
       run: |
-        wget -q https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-linux-amd64.zip
-        unzip -o ngrok-stable-linux-amd64.zip
-        sudo mv ngrok /usr/local/bin/
-        rm ngrok-stable-linux-amd64.zip
+        curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc > /dev/null
+        echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+        sudo apt update
+        sudo apt install -y ngrok
 
     - name: Set Ngrok Authtoken
       run: ngrok config add-authtoken 2YMpPG6ws3Y1x5unwwSlUNVs3Wu_67JPAFd2MmxAo7cBVK7Lq
