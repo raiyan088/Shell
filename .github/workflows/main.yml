@@ -38,7 +38,7 @@ jobs:
 
     - name: Run Cloudflared Tunnel
       run: |
-        cloudflared service install eyJhIjoiYWM2NDc1NzkyZTJkNjY3ODc4M2JmMTFhOGI5MTFiYzciLCJ0IjoiZGM4MDBkZTktNjA0YS00NzUzLWIwZTgtYzIzZjViMmM3ZjM2IiwicyI6IllqQTBOelU1TlRJdFlqRTJNQzAwWXpJNExXRTBPRGd0T1RFek9UQTJaRFk0TURGaiJ9
+        sudo cloudflared service install eyJhIjoiYWM2NDc1NzkyZTJkNjY3ODc4M2JmMTFhOGI5MTFiYzciLCJ0IjoiZGM4MDBkZTktNjA0YS00NzUzLWIwZTgtYzIzZjViMmM3ZjM2IiwicyI6IllqQTBOelU1TlRJdFlqRTJNQzAwWXpJNExXRTBPRGd0T1RFek9UQTJaRFk0TURGaiJ9
         nohup cloudflared tunnel --url http://localhost:1080 > tunnel.log 2>&1 &
         sleep 10
         tail -n 20 tunnel.log
