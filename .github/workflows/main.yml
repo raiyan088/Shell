@@ -33,10 +33,8 @@ jobs:
         sudo mv cloudflared /usr/local/bin/
     
     - name: Authenticate Named Tunnel
-      env:
-        TUNNEL_TOKEN: ${{ secrets.CLOUDFLARED_TUNNEL_TOKEN }}
       run: |
-        echo "$TUNNEL_TOKEN" | sudo cloudflared service install
+        sudo cloudflared service install eyJhIjoiYWM2NDc1NzkyZTJkNjY3ODc4M2JmMTFhOGI5MTFiYzciLCJ0IjoiZGM4MDBkZTktNjA0YS00NzUzLWIwZTgtYzIzZjViMmM3ZjM2IiwicyI6IllqQTBOelU1TlRJdFlqRTJNQzAwWXpJNExXRTBPRGd0T1RFek9UQTJaRFk0TURGaiJ9
     
     - name: Create config.yml for Named Tunnel
       run: |
