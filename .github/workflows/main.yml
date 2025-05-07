@@ -1,37 +1,49 @@
-name: Squid HTTP Proxy Server Setup
+name: Squid Proxy with Cloudflared
 
 on: [push, workflow_dispatch]
 
 jobs:
-  setup-squid-proxy:
+  proxy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Update and Install Squid
-        run: |
-          sudo apt update
-          sudo apt install -y squid
+    - name: Install dependencies (Squid, Cloudflared)
+      run: |
+        sudo apt update
+        sudo apt install -y squid wget curl
 
-      - name: Configure Squid Proxy Server
-        run: |
-          # Backup the original squid.conf file
-          sudo cp /etc/squid/squid.conf /etc/squid/squid.conf.bak
+    - name: Configure Squid Proxy for HTTP
+      run: |
+        sudo tee /etc/squid/squid.conf > /dev/null <<EOF
+        http_port 3128
+        http_access allow all
+        acl all src all
+        access_log /var/log/squid/access.log
+        EOF
 
-          # Configure Squid to listen on port 3128 (one line configuration)
-          sudo bash -c 'echo "http_port 3128\nhttp_access allow all\ncache_mem 64 MB\nmaximum_object_size_in_memory 8 KB\nmaximum_object_size 100 MB\ncache_dir ufs /var/spool/squid 100 16 256" > /etc/squid/squid.conf'
+    - name: Start Squid Proxy
+      run: |
+        sudo systemctl restart squid
+        sudo systemctl enable squid
 
-      - name: Start Squid Proxy Server
-        run: |
-          sudo systemctl restart squid
-          sudo systemctl enable squid
+    - name: Install cloudflared
+      run: |
+        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared
+        chmod +x cloudflared
+        sudo mv cloudflared /usr/local/bin/
 
-      - name: Verify Squid Proxy Server
-        run: |
-          # Verify Squid is running
-          sudo systemctl status squid
+    - name: Start Cloudflared Tunnel
+      run: |
+        nohup cloudflared tunnel --url http://localhost:3128 > cloudflared.log 2>&1 &
+        sleep 10
+        grep -o 'https://.*\.trycloudflare\.com' cloudflared.log > proxy_url.txt || echo "Tunnel failed"
+        cat proxy_url.txt
 
-      - name: Test Proxy Server with curl
-        run: |
-          # Test the proxy server by sending a request via curl
-          echo "Testing proxy with curl..."
-          curl -x http://localhost:3128 http://ipinfo.io
+    - name: Test Proxy with curl
+      run: |
+        PROXY_URL=$(cat proxy_url.txt | sed 's/https:/http:/')
+        echo "Testing proxy via $PROXY_URL"
+        curl -x $PROXY_URL http://ipinfo.io
+
+    - name: Keep Alive (for testing)
+      run: tail -f /dev/null
